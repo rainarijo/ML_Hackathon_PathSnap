@@ -1,5 +1,6 @@
 
 from pathlib import Path
+from typing import Any
 
 import joblib
 import numpy as np
@@ -31,7 +32,8 @@ model = None
 app = FastAPI(
     title="PathSnap API",
     description="GPS trajectory map-matching API using LightGBM and HMM",
-    version="2.0"
+    version="2.0",
+    swagger_ui_parameters={"syntaxHighlight": False}
 )
 
 
@@ -105,7 +107,7 @@ def get_trips():
 # PREDICT ROUTE
 # --------------------------------------------------
 
-@app.post("/predict")
+@app.post("/predict", response_model=dict[str, Any])
 def predict_route(request: PredictRequest):
 
     trip_id = request.trip_id
