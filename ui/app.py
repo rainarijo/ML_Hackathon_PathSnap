@@ -2,201 +2,208 @@
 import requests
 import streamlit as st
 import folium
-
 from streamlit_folium import st_folium
 
-
-# ==========================================
+# ==================================================
 # CONFIGURATION
-# ==========================================
+# ==================================================
 
 API_URL = "http://127.0.0.1:8000"
 
 st.set_page_config(
-    page_title="PathSnap | Smart Map Matching",
+    page_title="PathSnap | GPS Map Matching",
     page_icon="📍",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-
-# ==========================================
+# ==================================================
 # CUSTOM CSS
-# ==========================================
+# ==================================================
 
 st.markdown("""
 <style>
 
-.stApp {
-    background-color: #0b1120;
-    color: #e2e8f0;
+/* Main application background */
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+[data-testid="stMainBlockContainer"] {
+    background-color: #0b1020 !important;
+    color: #f1f5f9 !important;
 }
 
-[data-testid="stHeader"] {
-    background: transparent;
+/* Fix white header patch */
+header[data-testid="stHeader"],
+[data-testid="stHeader"],
+.stAppHeader {
+    background: #0b1020 !important;
+    color: #f1f5f9 !important;
 }
 
-.block-container {
-    padding-top: 2rem;
-    padding-bottom: 3rem;
-    max-width: 1450px;
+/* Toolbar */
+[data-testid="stToolbar"],
+[data-testid="stDecoration"],
+[data-testid="stStatusWidget"] {
+    background: #0b1020 !important;
 }
 
+/* Top-right controls */
+[data-testid="stToolbar"] button,
+[data-testid="stHeader"] button {
+    color: #f1f5f9 !important;
+}
+
+/* Sidebar */
 [data-testid="stSidebar"] {
-    background-color: #111c32;
-    border-right: 1px solid #263653;
+    background-color: #111e35 !important;
+}
+
+[data-testid="stSidebar"] > div {
+    background-color: #111e35 !important;
 }
 
 [data-testid="stSidebar"] * {
     color: #e2e8f0;
 }
 
-.hero {
-    background: linear-gradient(120deg, #172554, #1e40af, #075985);
-    padding: 32px;
-    border-radius: 18px;
-    border: 1px solid #31558a;
-    margin-bottom: 28px;
+/* Main headings */
+.stApp h1,
+.stApp h2,
+.stApp h3,
+.stApp h4 {
+    color: #f1f5f9 !important;
 }
 
-.hero h1 {
-    color: white;
-    font-size: 38px;
-    font-weight: 800;
-    margin: 0;
+/* Main text */
+.stApp p,
+.stApp label,
+.stApp li {
+    color: #e2e8f0;
 }
 
-.hero p {
-    color: #cbdffb;
-    font-size: 16px;
-    margin-top: 9px;
+/* Captions */
+[data-testid="stCaptionContainer"],
+.stCaption {
+    color: #94a3b8 !important;
 }
 
-.eyebrow {
-    color: #67e8f9;
-    font-size: 11px;
-    letter-spacing: 3px;
-    font-weight: 700;
-    margin-bottom: 10px;
-}
-
-.section-heading {
-    color: #f1f5f9;
-    font-size: 22px;
-    font-weight: 700;
-    margin-top: 15px;
-    margin-bottom: 16px;
-}
-
-.metric-card {
-    background: #14213a;
-    border: 1px solid #2b3c5c;
-    border-radius: 14px;
-    padding: 21px;
-    min-height: 125px;
-}
-
-.metric-label {
-    color: #94a3b8;
-    font-size: 13px;
-    margin-bottom: 12px;
-}
-
-.metric-value {
-    color: #67e8f9;
-    font-size: 30px;
-    font-weight: 750;
-}
-
-.metric-description {
-    color: #64748b;
-    font-size: 11px;
-    margin-top: 7px;
-}
-
-.status-pill {
-    display: inline-block;
-    background: #064e3b;
-    color: #6ee7b7;
-    border: 1px solid #047857;
-    border-radius: 20px;
-    padding: 5px 12px;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.legend-box {
-    background: #14213a;
-    border: 1px solid #2b3c5c;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 15px;
-}
-
-.legend-item {
-    color: #cbd5e1;
-    font-size: 14px;
-    padding: 5px 0;
-}
-
-.legend-line {
-    display: inline-block;
-    width: 28px;
-    height: 4px;
-    border-radius: 5px;
-    margin-right: 9px;
-    vertical-align: middle;
-}
-
-.footer {
-    text-align: center;
-    color: #64748b;
-    font-size: 12px;
-    padding: 25px;
-    border-top: 1px solid #263653;
-    margin-top: 35px;
-}
-
-div.stButton > button[kind="primary"] {
-    background: linear-gradient(90deg, #2563eb, #0891b2);
-    border: none;
-    border-radius: 10px;
-    color: white;
-    font-weight: 700;
-    min-height: 45px;
-}
-
-div.stButton > button[kind="primary"]:hover {
-    background: linear-gradient(90deg, #1d4ed8, #0e7490);
-    border: none;
-}
-
+/* Metric cards */
 [data-testid="stMetric"] {
-    background: #14213a;
-    border: 1px solid #2b3c5c;
-    padding: 18px;
-    border-radius: 13px;
+    background-color: #15243e !important;
+    border: 1px solid #2b405f !important;
+    padding: 20px;
+    border-radius: 15px;
 }
 
 [data-testid="stMetricLabel"] {
-    color: #94a3b8;
+    color: #91a8c9 !important;
 }
 
 [data-testid="stMetricValue"] {
-    color: #67e8f9;
+    color: #55e5f4 !important;
 }
 
+/* Select box */
+[data-baseweb="select"] > div {
+    background-color: #15243e !important;
+    border: 1px solid #38516f !important;
+    color: #ffffff !important;
+}
+
+[data-baseweb="select"] * {
+    color: #ffffff !important;
+}
+
+/* Dropdown menu */
+[data-baseweb="popover"],
+[data-baseweb="menu"] {
+    background-color: #15243e !important;
+}
+
+[data-baseweb="menu"] * {
+    color: #ffffff !important;
+}
+
+/* Buttons */
+.stButton > button {
+    background: linear-gradient(90deg, #2860f5, #079bb5) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 10px 22px !important;
+    font-weight: bold !important;
+}
+
+.stButton > button:hover {
+    border: 1px solid #55e5f4 !important;
+    color: #ffffff !important;
+}
+
+/* Dividers */
 hr {
-    border-color: #263653;
+    border-color: #24344f !important;
+}
+
+/* Links */
+a {
+    color: #55e5f4 !important;
+}
+
+/* Success and error messages */
+[data-testid="stAlert"] {
+    border-radius: 10px;
+}
+
+/* Remove unnecessary top spacing */
+.block-container {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+}
+
+/* Map container */
+iframe {
+    border-radius: 12px;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 
-# ==========================================
+# ==================================================
+# API FUNCTIONS
+# ==================================================
+
+def check_api():
+    try:
+        response = requests.get(API_URL, timeout=5)
+        return response.status_code == 200
+    except requests.RequestException:
+        return False
+
+
+def get_trips():
+    response = requests.get(
+        f"{API_URL}/trips",
+        timeout=10
+    )
+    response.raise_for_status()
+    return response.json().get("trips", [])
+
+
+def predict_trip(trip_id):
+    response = requests.post(
+        f"{API_URL}/predict",
+        json={"trip_id": trip_id},
+        timeout=300
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+# ==================================================
 # SIDEBAR
-# ==========================================
+# ==================================================
 
 with st.sidebar:
 
@@ -217,321 +224,260 @@ with st.sidebar:
 
     st.markdown("### System Status")
 
-    try:
-        health = requests.get(API_URL, timeout=5)
-        health.raise_for_status()
-
-        st.markdown(
-            '<span class="status-pill">● API ONLINE</span>',
-            unsafe_allow_html=True
-        )
-
-    except requests.RequestException:
-        st.error("API OFFLINE")
-        st.stop()
+    if check_api():
+        st.success("● API ONLINE")
+    else:
+        st.error("● API OFFLINE")
 
     st.divider()
 
-    st.markdown("### Technology Stack")
-
-    st.markdown("""
-    - **Backend:** FastAPI
-    - **Frontend:** Streamlit
-    - **Mapping:** Folium
-    - **Processing:** Python
-    """)
-
-    st.divider()
-
-    st.caption("PathSnap | Hackathon Project")
+    st.caption("PathSnap | LightGBM + HMM")
 
 
-# ==========================================
-# HEADER
-# ==========================================
+# ==================================================
+# MAIN DASHBOARD
+# ==================================================
 
-st.markdown("""
-<div class="hero">
-    <div class="eyebrow">GEOSPATIAL INTELLIGENCE PLATFORM</div>
-    <h1>PathSnap</h1>
-    <p>
-        From raw GPS observations to intelligent road-network
-        trajectories.
-    </p>
-</div>
-""", unsafe_allow_html=True)
+st.markdown("# PathSnap Dashboard")
+
+st.caption(
+    "GPS trajectory analysis and intelligent road map matching"
+)
 
 
-# ==========================================
-# LOAD TRIPS
-# ==========================================
+# ==================================================
+# FETCH AVAILABLE TRIPS
+# ==================================================
 
 try:
-    response = requests.get(
-        f"{API_URL}/trips",
-        timeout=10
-    )
-    response.raise_for_status()
+    trips = get_trips()
 
-    trips = response.json()["trips"]
+    if not trips:
+        st.warning("No trajectories found in the dataset.")
+        st.stop()
 
 except requests.RequestException as error:
-    st.error(f"Could not retrieve trips: {error}")
+    st.error(f"Could not connect to the PathSnap API: {error}")
     st.stop()
 
 
-# ==========================================
+# ==================================================
 # TRIP SELECTION
-# ==========================================
+# ==================================================
 
-st.markdown(
-    '<div class="section-heading">01 / Select Trajectory</div>',
-    unsafe_allow_html=True
-)
+col1, col2 = st.columns([3, 1])
 
-select_col, info_col = st.columns([3, 1])
-
-with select_col:
+with col1:
 
     selected_trip = st.selectbox(
-        "Choose an evaluator trip",
-        trips
+        "Select GPS Trajectory",
+        trips,
+        format_func=lambda x: str(x)
     )
 
-with info_col:
+with col2:
 
-    st.metric("Available Trajectories", len(trips))
-
-
-# Clear old results when the selected trip changes.
-if st.session_state.get("last_selected_trip") != selected_trip:
-
-    st.session_state.pop("prediction", None)
-
-    st.session_state["last_selected_trip"] = selected_trip
-
-
-predict_col, _ = st.columns([1, 3])
-
-with predict_col:
-
-    predict_clicked = st.button(
-        "✦  Generate Route Prediction",
-        type="primary",
-        use_container_width=True
+    st.metric(
+        "Available Trajectories",
+        len(trips)
     )
 
 
-# ==========================================
-# PREDICTION
-# ==========================================
+# Clear stale results when a different trip is selected
+if (
+    "prediction_result" in st.session_state
+    and st.session_state.get("last_selected_trip") != selected_trip
+):
+    del st.session_state["prediction_result"]
 
-if predict_clicked:
+
+# ==================================================
+# PREDICTION BUTTON
+# ==================================================
+
+st.markdown("### Generate Route Prediction")
+
+if st.button(
+    "✨ Generate Route Prediction",
+    use_container_width=False
+):
 
     with st.spinner(
-        "Analysing GPS observations and matching road segments..."
+        "Running LightGBM + HMM route prediction..."
     ):
 
         try:
 
-            response = requests.post(
-                f"{API_URL}/predict",
-                json={"trip_id": selected_trip},
-                timeout=180
-            )
+            result = predict_trip(selected_trip)
 
-            response.raise_for_status()
-
-            st.session_state["prediction"] = response.json()
+            st.session_state["prediction_result"] = result
+            st.session_state["last_selected_trip"] = selected_trip
 
         except requests.RequestException as error:
 
             st.error(f"Prediction failed: {error}")
+            st.stop()
 
 
-# ==========================================
+# ==================================================
 # DISPLAY RESULTS
-# ==========================================
+# ==================================================
 
-if "prediction" in st.session_state:
+if "prediction_result" in st.session_state:
 
-    result = st.session_state["prediction"]
+    result = st.session_state["prediction_result"]
 
     st.divider()
 
     st.markdown(
-        f'<div class="section-heading">'
-        f'02 / Analysis Results &nbsp; '
-        f'<span style="color:#67e8f9;">{result["trip_id"]}</span>'
-        f'</div>',
+        f"""
+        ## 02 / Analysis Results
+        <span style="color:#55e5f4">
+        {result['trip_id']}
+        </span>
+        """,
         unsafe_allow_html=True
     )
 
-    # --------------------------------------
-    # MAIN METRICS
-    # --------------------------------------
+    # --------------------------------------------------
+    # PERFORMANCE METRICS
+    # --------------------------------------------------
 
-    c1, c2, c3 = st.columns(3)
+    col1, col2, col3 = st.columns(3)
 
-    with c1:
+    col1.metric(
+        "ML + HMM Accuracy",
+        f"{result['accuracy_percent']:.2f}%"
+    )
 
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">BASELINE ACCURACY</div>
-            <div class="metric-value">
-                {result['accuracy_percent']}%
-            </div>
-            <div class="metric-description">
-                Exact reference arc agreement
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    col2.metric(
+        "GPS Observations",
+        f"{result['total_points']:,}"
+    )
 
-    with c2:
+    col3.metric(
+        "Correct Predictions",
+        f"{result['correct_points']:,}"
+    )
 
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">GPS OBSERVATIONS</div>
-            <div class="metric-value">
-                {result['total_points']:,}
-            </div>
-            <div class="metric-description">
-                Total trajectory points
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    col4, col5, col6 = st.columns(3)
 
-    with c3:
+    col4.metric(
+        "Candidate Coverage",
+        f"{result['candidate_coverage_percent']:.2f}%"
+    )
 
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">CORRECT PREDICTIONS</div>
-            <div class="metric-value">
-                {result['correct_points']:,}
-            </div>
-            <div class="metric-description">
-                Exact predicted arc matches
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    if result["median_label_distance_m"] is not None:
 
-    st.write("")
-
-    # --------------------------------------
-    # SECONDARY METRICS
-    # --------------------------------------
-
-    c4, c5 = st.columns(2)
-
-    with c4:
-
-        st.metric(
-            "Candidate Coverage",
-            f"{result['candidate_coverage_percent']}%"
-        )
-
-    with c5:
-
-        st.metric(
+        col5.metric(
             "Median Label Distance",
-            f"{result['median_label_distance_m']} m"
+            f"{result['median_label_distance_m']:.2f} m"
         )
+
+    else:
+
+        col5.metric(
+            "Median Label Distance",
+            "N/A"
+        )
+
+    col6.metric(
+        "Route Continuity",
+        f"{result['route_continuity'] * 100:.2f}%"
+    )
 
     st.caption(
-        "These are temporary nearest-candidate baseline results. "
-        "Final ML/HMM predictions will be integrated separately."
+        f"Prediction Method: {result['prediction_method']} "
+        f"| Coordinate System: EPSG:{result['epsg']}"
     )
+
+    st.info(
+        "Route predictions are generated using LightGBM "
+        "classification and HMM-based Viterbi sequence decoding."
+    )
+
+    # ==================================================
+    # MAP VISUALIZATION
+    # ==================================================
 
     st.divider()
 
-    # ======================================
-    # ROUTE VISUALIZATION
-    # ======================================
-
-    st.markdown(
-        '<div class="section-heading">03 / Route Visualization</div>',
-        unsafe_allow_html=True
-    )
-
-    # Clean legend using separate Streamlit columns.
-    legend_col1, legend_col2 = st.columns(2)
-
-    with legend_col1:
-
-        st.markdown(
-            '<span style="color:#38bdf8;">━━━━</span> '
-            'Original GPS trajectory',
-            unsafe_allow_html=True
-        )
-
-    with legend_col2:
-
-        st.markdown(
-            '<span style="color:#fb7185;">━━━━</span> '
-            'Predicted road segments',
-            unsafe_allow_html=True
-        )
+    st.markdown("## 03 / Matched Route Visualization")
 
     gps_points = result["gps_points"]
-
     predicted_arcs = result["predicted_arcs"]
 
-    if gps_points:
+    if not gps_points:
 
-        gps_coordinates = [
-            [p["lat"], p["lon"]]
-            for p in gps_points
-        ]
+        st.warning("No GPS points available to display.")
 
+    else:
+
+        # Map center
         center_lat = sum(
-            p["lat"] for p in gps_points
+            point["lat"] for point in gps_points
         ) / len(gps_points)
 
         center_lon = sum(
-            p["lon"] for p in gps_points
+            point["lon"] for point in gps_points
         ) / len(gps_points)
 
-        # OpenStreetMap does not require a CartoDB API key.
         route_map = folium.Map(
             location=[center_lat, center_lon],
-            zoom_start=13,
+            zoom_start=11,
             tiles="OpenStreetMap"
         )
 
-        # ----------------------------------
-        # ORIGINAL GPS TRAJECTORY
-        # ----------------------------------
+        # --------------------------------------------------
+        # RAW GPS TRAJECTORY
+        # --------------------------------------------------
+
+        gps_coordinates = [
+            [point["lat"], point["lon"]]
+            for point in gps_points
+        ]
 
         folium.PolyLine(
             gps_coordinates,
-            color="#2563eb",
-            weight=4,
-            opacity=0.9,
-            tooltip="Original GPS trajectory"
+            color="#2878ff",
+            weight=3,
+            opacity=0.85,
+            tooltip="Raw GPS Trajectory"
         ).add_to(route_map)
 
-        # ----------------------------------
+        # --------------------------------------------------
         # PREDICTED ROAD SEGMENTS
-        # ----------------------------------
+        # --------------------------------------------------
 
         for arc in predicted_arcs:
 
-            coordinates = [
-                [point[1], point[0]]
-                for point in arc["coordinates"]
-            ]
+            coordinates = arc.get("coordinates", [])
 
-            folium.PolyLine(
-                coordinates,
-                color="#e11d48",
-                weight=4,
-                opacity=0.95,
-                tooltip=f"Predicted Arc {arc['arc_id']}"
-            ).add_to(route_map)
+            if len(coordinates) == 2:
 
-        # ----------------------------------
+                # API coordinates: [longitude, latitude]
+                segment = [
+                    [
+                        coordinates[0][1],
+                        coordinates[0][0]
+                    ],
+                    [
+                        coordinates[1][1],
+                        coordinates[1][0]
+                    ]
+                ]
+
+                folium.PolyLine(
+                    segment,
+                    color="#ff3155",
+                    weight=5,
+                    opacity=0.9,
+                    tooltip=f"Predicted Road Arc: {arc['arc_id']}"
+                ).add_to(route_map)
+
+        # --------------------------------------------------
         # START MARKER
-        # ----------------------------------
+        # --------------------------------------------------
 
         folium.Marker(
             gps_coordinates[0],
@@ -542,9 +488,9 @@ if "prediction" in st.session_state:
             )
         ).add_to(route_map)
 
-        # ----------------------------------
+        # --------------------------------------------------
         # END MARKER
-        # ----------------------------------
+        # --------------------------------------------------
 
         folium.Marker(
             gps_coordinates[-1],
@@ -555,44 +501,58 @@ if "prediction" in st.session_state:
             )
         ).add_to(route_map)
 
-        # Fit map to GPS trajectory.
+        # Fit map to GPS trajectory
         route_map.fit_bounds(gps_coordinates)
 
-        # Display map.
         st_folium(
             route_map,
-            width=None,
-            height=650,
+            use_container_width=True,
+            height=550,
             returned_objects=[]
         )
 
-    else:
+        # --------------------------------------------------
+        # MAP LEGEND
+        # --------------------------------------------------
 
-        st.warning(
-            "No GPS coordinates found for this trajectory."
-        )
+        st.markdown("""
+        **Map Legend**
 
+        🔵 Blue — Raw GPS trajectory
 
-# ==========================================
-# FOOTER
-# ==========================================
+        🔴 Red — Predicted road segments
 
-st.markdown("""
-<div class="footer">
-    PATHSNAP &nbsp; | &nbsp;
-    GEOSPATIAL INTELLIGENCE &nbsp; | &nbsp;
-    GPS MAP MATCHING
-</div>
-""", unsafe_allow_html=True)
+        🟢 Green marker — Starting point
 
+        🔴 Red marker — Ending point
+        """)
 
-# ==========================================
-# EMPTY STATE
-# ==========================================
-
-if "prediction" not in st.session_state:
+else:
 
     st.info(
-        "Choose an evaluator trajectory and generate a prediction "
-        "to explore its route and analysis results."
+        "Select a trajectory and click Generate Route Prediction "
+        "to begin map matching."
     )
+
+
+# ==================================================
+# FOOTER
+# ==================================================
+
+st.divider()
+
+st.markdown(
+    """
+    <div style="
+        text-align:center;
+        color:#94a3b8;
+        padding:10px;
+        font-size:13px;
+    ">
+        PathSnap | Intelligent GPS Map Matching
+        <br>
+        Powered by LightGBM + Hidden Markov Model
+    </div>
+    """,
+    unsafe_allow_html=True
+)
