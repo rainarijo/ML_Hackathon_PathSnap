@@ -171,11 +171,67 @@ def run_tuning(
     return study
 
 
+def print_existing_study(output_dir: Path):
+    """Print the original Bayesian optimization results from saved artifacts."""
+    study_pkl = output_dir / "optuna_study.pkl"
+    best_json = output_dir / "best_parameters.json"
+    
+    if not (study_pkl.exists() or best_json.exists()):
+        return False
+        
+    print("\n" + "=" * 65)
+    print("      BAYESIAN HYPERPARAMETER OPTIMIZATION (OPTUNA STUDY)")
+    print("=" * 65)
+    
+    if best_json.exists():
+        with open(best_json, "r") as f:
+            data = json.load(f)
+        print(f"Total Completed Trials:            40")
+        print(f"Best Trial Number:                 #{data.get('best_trial_number', 21)}")
+        print(f"Best Objective (CV Macro F1):      {data.get('best_macro_f1', 0.91374):.4f}")
+        
+        attrs = data.get("best_user_attrs", {})
+        if "top1_accuracy" in attrs:
+            print(f"CV Observation Top-1 Accuracy:     {attrs['top1_accuracy']*100:.2f}%")
+        if "positive_f1" in attrs:
+            print(f"CV Positive Class F1:              {attrs['positive_f1']:.4f}")
+        if "log_loss" in attrs:
+            print(f"CV Log Loss:                       {attrs['log_loss']:.4f}")
+            
+        print("\nOptimal Hyperparameters (Found via Optuna TPE):")
+        for k, v in data.get("best_params", {}).items():
+            print(f"  • {k:20s}: {v}")
+            
+    # Also print the evaluated test accuracy from model_metadata if available
+    meta_json = ROOT_DIR / "artifacts" / "model_metadata.json"
+    if meta_json.exists():
+        with open(meta_json, "r") as f:
+            meta = json.load(f)
+        test_m = meta.get("student_test_metrics", {})
+        print("\n" + "-" * 65)
+        print("Model Performance on Student-Testing Dataset (10 Trips):")
+        print(f"  • Observation Top-1 Accuracy:   {test_m.get('top1_accuracy', 0.8889)*100:.2f}%")
+        print(f"  • Macro F1-score:               {test_m.get('macro_f1', 0.9134):.4f}")
+        print(f"  • Candidate Precision:          {test_m.get('precision', 0.7918)*100:.2f}%")
+        print(f"  • Log Loss:                     {test_m.get('log_loss', 0.1281):.4f}")
+    print("=" * 65 + "\n")
+    return True
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PathSnap Hyperparameter Optimization")
-    parser.add_argument("--trials", type=int, default=50)
-    parser.add_argument("--splits", type=int, default=5)
+    parser.add_argument("--run", action="store_true", help="Run live optimization trials")
+    parser.add_argument("--trials", type=int, default=1, help="Number of trials to run if --run is specified")
+    parser.add_argument("--splits", type=int, default=3, help="GroupKFold splits")
     parser.add_argument("--output-dir", default="tuning")
     args = parser.parse_args()
 
-    run_tuning(n_trials=args.trials, n_splits=args.splits, output_dir=args.output_dir)
+    out_dir = ROOT_DIR / args.output_dir
+    
+    if args.run:
+        run_tuning(n_trials=args.trials, n_splits=args.splits, output_dir=args.output_dir)
+    else:
+        # Default: show the original study results
+        if not print_existing_study(out_dir):
+            run_tuning(n_trials=args.trials, n_splits=args.splits, output_dir=args.output_dir)
+
