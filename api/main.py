@@ -1,6 +1,8 @@
 
 from pathlib import Path
+from typing import Any
 
+import joblib
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -13,6 +15,7 @@ from data_processing.loader import (
 )
 from data_processing.labels import label_points
 from features.build_features import generate_candidates, add_features
+from hmm.viterbi import viterbi, route_continuity
 
 
 # --------------------------------------------------
@@ -22,12 +25,37 @@ from features.build_features import generate_candidates, add_features
 ROOT = Path(__file__).resolve().parents[1]
 
 DATA_DIR = ROOT / "data" / "Student folder" / "student_test"
+MODEL_PATH = ROOT / "artifacts" / "model.joblib"
+
+model = None
 
 app = FastAPI(
     title="PathSnap API",
-    description="GPS trajectory map-matching API",
-    version="1.0"
+    description="GPS trajectory map-matching API using LightGBM and HMM",
+    version="2.0",
+    swagger_ui_parameters={"syntaxHighlight": False}
 )
+
+
+# --------------------------------------------------
+# LOAD MODEL ONCE WHEN API STARTS
+# --------------------------------------------------
+
+@app.on_event("startup")
+def load_model():
+    global model
+
+    if not MODEL_PATH.exists():
+        raise RuntimeError(f"Model file not found: {MODEL_PATH}")
+
+    model = joblib.load(MODEL_PATH)
+
+    print(f"[MODEL] Loaded LightGBM model from {MODEL_PATH}", flush=True)
+    print(
+        f"[MODEL] Number of features: "
+        f"{len(model.feature_names_in_)}",
+        flush=True
+    )
 
 
 # --------------------------------------------------
@@ -48,7 +76,8 @@ def home():
 
     return {
         "message": "Welcome to PathSnap API",
-        "status": "running"
+        "status": "running",
+        "model": "LightGBM + HMM"
     }
 
 
@@ -78,14 +107,13 @@ def get_trips():
 # PREDICT ROUTE
 # --------------------------------------------------
 
-@app.post("/predict")
+@app.post("/predict", response_model=dict[str, Any])
 def predict_route(request: PredictRequest):
 
     trip_id = request.trip_id
 
     print(f"[REQUEST] POST /predict | trip_id={trip_id}", flush=True)
 
-    # Validate trip ID
     available_trips = list_trips(DATA_DIR)
 
     if trip_id not in available_trips:
@@ -94,9 +122,15 @@ def predict_route(request: PredictRequest):
             detail="Trip not found"
         )
 
+    if model is None:
+        raise HTTPException(
+            status_code=503,
+            detail="ML model has not been loaded"
+        )
+
     try:
         # 1. Load GPS track and road network.
-        #    This does NOT load the ground-truth route.
+        #    Ground-truth route is NOT loaded here.
         track, nodes, arcs = load_trip(DATA_DIR, trip_id)
 
         # 2. Convert coordinates to metres.
@@ -104,32 +138,42 @@ def predict_route(request: PredictRequest):
 
         # 3. Generate nearby road candidates.
         candidates = generate_candidates(
+            track, nodes, arcs, 50, 8
+        )
+
+        # 4. Extract candidate features.
+        candidates = add_features(
+            candidates, track, nodes, arcs
+        )
+
+        # 5. LightGBM: calculate candidate probabilities.
+        if not candidates.empty:
+            feature_names = list(model.feature_names_in_)
+
+            missing_features = [
+                col for col in feature_names
+                if col not in candidates.columns
+            ]
+
+            if missing_features:
+                raise ValueError(
+                    f"Missing model features: {missing_features}"
+                )
+
+            candidates["prob"] = model.predict_proba(
+                candidates[feature_names]
+            )[:, 1]
+
+        # 6. HMM + Viterbi: predict the most likely road sequence.
+        pred = viterbi(
             track,
             nodes,
             arcs,
-            radius=50.0,
-            max_cand=8
-        )
-
-        # 4. Calculate candidate features.
-        candidates = add_features(
             candidates,
-            track,
-            nodes,
-            arcs
+            beta=10.0
         )
 
-        # 5. Select the nearest candidate for each GPS point.
-        nearest = candidates[
-            candidates["dist_rank"] == 1
-        ].set_index("point_idx")
-
-        predictions = [None] * len(track)
-
-        for point_idx, row in nearest.iterrows():
-            predictions[int(point_idx)] = int(row["arc_id"])
-
-        # 6. Prepare GPS coordinates for the map.
+        # 7. Prepare GPS coordinates for the map.
         gps_points = [
             {
                 "lat": float(row.lat),
@@ -138,12 +182,19 @@ def predict_route(request: PredictRequest):
             for row in track.itertuples()
         ]
 
-        # 7. Prepare predicted road segments for the map.
+        # 8. Prepare predicted road segments for the map.
+        #    -1 means no predicted arc for that GPS point.
+        candidate_distances = {
+            (int(row.point_idx), int(row.arc_id)): float(row.dist)
+            for row in candidates.itertuples()
+        }
+
         predicted_arcs = []
 
-        for point_idx, arc_id in enumerate(predictions):
+        for point_idx, arc_id in enumerate(pred):
+            arc_id = int(arc_id)
 
-            if arc_id is None:
+            if arc_id < 0:
                 continue
 
             arc = arcs.iloc[arc_id]
@@ -153,9 +204,9 @@ def predict_route(request: PredictRequest):
 
             predicted_arcs.append({
                 "point_idx": point_idx,
-                "arc_id": int(arc_id),
-                "distance_m": float(
-                    nearest.loc[point_idx, "dist"]
+                "arc_id": arc_id,
+                "distance_m": candidate_distances.get(
+                    (point_idx, arc_id)
                 ),
                 "coordinates": [
                     [
@@ -169,7 +220,10 @@ def predict_route(request: PredictRequest):
                 ]
             })
 
-        # 8. Evaluation: load ground truth separately.
+        # 9. Evaluate route continuity from predictions.
+        continuity = route_continuity(pred, arcs)
+
+        # 10. Load ground truth ONLY AFTER prediction.
         route = load_route(DATA_DIR, trip_id)
 
         true_arcs, label_distances, _ = label_points(
@@ -179,11 +233,10 @@ def predict_route(request: PredictRequest):
             route
         )
 
-        # Missing predictions count as incorrect.
+        # Missing predictions (-1) count as incorrect.
         correct = sum(
-            prediction == int(true_arc)
-            for prediction, true_arc in zip(predictions, true_arcs)
-            if prediction is not None
+            int(predicted) == int(actual)
+            for predicted, actual in zip(pred, true_arcs)
         )
 
         total_points = len(track)
@@ -194,31 +247,38 @@ def predict_route(request: PredictRequest):
         )
 
         coverage = (
-            sum(p is not None for p in predictions)
-            / total_points * 100
+            np.count_nonzero(pred >= 0) / total_points * 100
             if total_points else 0.0
+        )
+
+        median_distance = (
+            float(np.median(label_distances))
+            if len(label_distances) else None
         )
 
         print(
             f"[RESULT] trip={trip_id}, "
             f"accuracy={accuracy:.2f}%, "
-            f"coverage={coverage:.2f}%",
+            f"coverage={coverage:.2f}%, "
+            f"continuity={continuity:.4f}",
             flush=True
         )
 
-        # 9. Return results to the UI.
+        # 11. Return results to Streamlit.
         return {
             "trip_id": trip_id,
             "total_points": total_points,
             "accuracy_percent": round(accuracy, 2),
             "correct_points": correct,
             "candidate_coverage_percent": round(coverage, 2),
-            "median_label_distance_m": round(
-                float(np.median(label_distances)), 2
+            "median_label_distance_m": (
+                round(median_distance, 2)
+                if median_distance is not None else None
             ),
+            "route_continuity": round(continuity, 4),
             "gps_points": gps_points,
             "predicted_arcs": predicted_arcs,
-            "prediction_method": "Nearest candidate baseline",
+            "prediction_method": "LightGBM + HMM (Viterbi)",
             "epsg": int(epsg)
         }
 
