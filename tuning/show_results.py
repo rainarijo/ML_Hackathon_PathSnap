@@ -1,9 +1,12 @@
 import json
+from pathlib import Path
 import pandas as pd
 
-meta = json.load(open('artifacts/model_metadata.json'))
-best = json.load(open('tuning/best_parameters.json'))
-exp = pd.read_csv('results/experiments.csv')
+ROOT = Path(__file__).resolve().parents[1]
+
+meta = json.load(open(ROOT / 'artifacts' / 'model_metadata.json'))
+best = json.load(open(ROOT / 'tuning' / 'best_parameters.json'))
+exp = pd.read_csv(ROOT / 'results' / 'experiments.csv')
 lgbm_exp = exp[exp['model'] == 'lightgbm'].iloc[0]
 
 print("=" * 65)
