@@ -1,0 +1,16 @@
+pandas
+numpy
+pyproj
+shapely>=2.0
+networkx
+folium
+pyarrow
+matplotlib
+scikit-learn
+lightgbm
+optuna
+fastapi
+uvicorn
+streamlit
+streamlit-folium
+joblib
