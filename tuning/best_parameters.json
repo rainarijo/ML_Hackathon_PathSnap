@@ -1,0 +1,20 @@
+{
+    "best_trial_number": 21,
+    "best_macro_f1": 0.9137395159496218,
+    "best_user_attrs": {
+        "top1_accuracy": 0.8744176569710453,
+        "positive_f1": 0.8593516601588091,
+        "log_loss": 0.1358415884849516
+    },
+    "best_params": {
+        "n_estimators": 350,
+        "max_depth": 12,
+        "num_leaves": 117,
+        "learning_rate": 0.1672957812615987,
+        "min_child_samples": 63,
+        "subsample": 0.7,
+        "colsample_bytree": 0.7,
+        "reg_alpha": 0.0017362475407851647,
+        "reg_lambda": 0.003690526456089437
+    }
+}

@@ -1,0 +1,36 @@
+{
+    "model_name": "LightGBM Classifier",
+    "feature_names": [
+        "dist",
+        "t_frac",
+        "arc_len",
+        "speed",
+        "dt_prev",
+        "heading_diff",
+        "heading_reliable",
+        "n_cand",
+        "dist_rank",
+        "dist_minus_min",
+        "dist_ratio",
+        "same_as_prev_nearest",
+        "connected_to_prev_nearest"
+    ],
+    "n_features": 13,
+    "target_column": "label",
+    "class_labels": [
+        0,
+        1
+    ],
+    "best_hyperparameters": {
+        "n_estimators": 350,
+        "max_depth": 12,
+        "num_leaves": 117,
+        "learning_rate": 0.1672957812615987,
+        "min_child_samples": 63,
+        "subsample": 0.7,
+        "colsample_bytree": 0.7,
+        "reg_alpha": 0.0017362475407851647,
+        "reg_lambda": 0.003690526456089437
+    },
+    "best_cv_macro_f1": 0.9137395159496218
+}

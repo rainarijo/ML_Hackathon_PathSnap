@@ -1,0 +1,61 @@
+{
+    "model_type": "LightGBM Classifier",
+    "library_version": "4.7.0",
+    "target_variable": "label",
+    "classes": [
+        0,
+        1
+    ],
+    "feature_column_order": [
+        "dist",
+        "t_frac",
+        "arc_len",
+        "speed",
+        "dt_prev",
+        "heading_diff",
+        "heading_reliable",
+        "n_cand",
+        "dist_rank",
+        "dist_minus_min",
+        "dist_ratio",
+        "same_as_prev_nearest",
+        "connected_to_prev_nearest"
+    ],
+    "n_features": 13,
+    "training_rows": 1032740,
+    "training_trips": 78,
+    "excluded_trips": [
+        "00000033",
+        "00000054"
+    ],
+    "reason_excluded": "GPS drift >120m away from road network causing extreme candidate miss rate",
+    "hyperparameters": {
+        "n_estimators": 350,
+        "max_depth": 12,
+        "num_leaves": 117,
+        "learning_rate": 0.1672957812615987,
+        "min_child_samples": 63,
+        "subsample": 0.7,
+        "colsample_bytree": 0.7,
+        "reg_alpha": 0.0017362475407851647,
+        "reg_lambda": 0.003690526456089437,
+        "class_weight": "balanced",
+        "random_state": 42,
+        "n_jobs": -1,
+        "verbose": -1
+    },
+    "best_cv_macro_f1": 0.9137395159496218,
+    "student_test_metrics": {
+        "top1_accuracy": 0.8888830897703549,
+        "macro_f1": 0.9133559586187047,
+        "f1": 0.858479925124193,
+        "precision": 0.7918363732955551,
+        "recall": 0.9373722551228971,
+        "log_loss": 0.1281461679842863,
+        "row_accuracy": 0.9481117133605519
+    },
+    "integration_notes": {
+        "Member_C_HMM": "Load model with joblib.dump. Call model.predict_proba(candidates[FEATURE_COLS])[:, 1] to obtain emission probabilities P(match=1) for candidate road arcs.",
+        "Member_D_FastAPI": "Validate input dictionary against FEATURE_COLS order, create DataFrame or 2D array, and call model.predict_proba() for real-time scoring."
+    }
+}
