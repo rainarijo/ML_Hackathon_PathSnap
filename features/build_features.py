@@ -73,6 +73,14 @@ def add_features(c, track, nodes, arcs):
     hd = np.abs(heading[p] - arc_bearing[a]) % 360
     c["heading_diff"] = np.minimum(hd, 360 - hd)          # 0 = same direction, 180 = opposite
     c["heading_reliable"] = (speed[p] > 1.0).astype(int)  # heading is noise when nearly stopped
+    
+    # turn rate: how fast the GPS heading is changing (deg/s); 0 when nearly stopped
+    t = track["t"].to_numpy()
+    dh = np.abs(np.diff(heading))
+    dh = np.minimum(dh, 360 - dh)
+    turn = np.r_[0.0, dh / np.maximum(np.diff(t), 1e-6)]
+    turn[speed < 1.0] = 0.0
+    c["turn_rate"] = turn[p]
 
     g = c.groupby("point_idx")["dist"]
     c["n_cand"] = g.transform("size")
