@@ -1,1 +1,22 @@
-# PathSnapecho.echo ## Project Overviewecho PathSnap is a machine learning-based GPS map matching and route reconstruction project.echo.echo ## Project Structureecho - data_processing: Data cleaning and preprocessingecho - features: Feature engineeringecho - models: Machine learning modelsecho - tuning: Hyperparameter optimisationecho - hmm: Hidden Markov Model and Viterbi algorithmecho - api: Backend APIecho - ui: User interfaceecho - viz: Route visualisationecho - results: Model evaluationecho - artifacts: Saved modelsecho - report: Project documentationecho.echo ## Technologiesecho - Pythonecho - Scikit-learnecho - FastAPIecho - Machine Learningecho.echo ## Datasetecho The dataset is stored locally in the data directory and excluded from Git tracking.
+# PathSnap
+
+## Project Overview
+PathSnap is a machine learning-based GPS map matching and route reconstruction project.
+
+## Project Structure
+- data_processing: Data preprocessing
+- features: Feature engineering
+- models: Machine learning models
+- tuning: Hyperparameter optimisation
+- hmm: Hidden Markov Model and Viterbi algorithm
+- api: Backend API
+- ui: User interface
+- viz: Route visualisation
+- results: Model evaluation
+- artifacts: Saved models
+- report: Documentation
+
+## Technologies
+- Python
+- Scikit-learn
+- FastAPI
